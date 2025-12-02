@@ -11,6 +11,8 @@ on:
 jobs:
   setup-and-deploy:
     runs-on: ubuntu-latest
+    env:
+      SITE_NAME: ${{ github.event.inputs.site_name }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -42,3 +44,27 @@ jobs:
           echo "Waiting for nodes..."
           kubectl wait --for=condition=ready node --all --timeout=60s
           kubectl get nodes
+
+      - name: Deploy with Terraform
+        run: |
+          echo "Initializing and Applying Terraform..."
+          cd terraform
+          terraform init
+          terraform apply -auto-approve -var="site_name=$SITE_NAME"  
+
+      - name: Verify Application
+        run: |
+          DEPLOYMENT_NAME="${SITE_NAME}-deployment"
+          SERVICE_NAME="${SITE_NAME}-service"
+          echo "Waiting for rollout to complete..."
+          kubectl rollout status deployment/$DEPLOYMENT_NAME -n $SITE_NAME --timeout=60s
+          echo "Sending request to application"
+          RESPONSE=$(curl -s --fail --retry 10 --retry-delay 1 --retry-connrefused localhost:80)
+          echo "Server Response: $RESPONSE"
+          EXPECTED_TEXT="hello $SITE_NAME"
+          if [[ "$RESPONSE" == *"$EXPECTED_TEXT"* ]]; then
+            echo "SUCCESS: Site is up and valid!"
+          else
+            echo "FAILURE: Expected '$EXPECTED_TEXT' but got response: '$RESPONSE'"
+            exit 1
+          fi
