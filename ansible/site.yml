@@ -1,0 +1,53 @@
+
+- name: Prepare CI Runner with Minikube, Kubectl, and Terraform
+  hosts: localhost
+  connection: local
+  become: true  
+
+  vars:
+    kubectl_version: "v1.31.0"
+
+  tasks:
+    - name: Install basic dependencies
+      apt:
+        name:
+          - curl
+          - wget
+          - apt-transport-https
+          - gnupg
+          - software-properties-common
+        state: present
+        update_cache: yes
+
+    - name: Download Kubectl binary
+      get_url:
+        url: "https://dl.k8s.io/release/{{ kubectl_version }}/bin/linux/amd64/kubectl"
+        dest: /usr/local/bin/kubectl
+        mode: '0755'
+
+    - name: Download Minikube .deb package
+      get_url:
+        url: https://storage.googleapis.com/minikube/releases/latest/minikube_latest_amd64.deb
+        dest: /tmp/minikube.deb
+
+    - name: Install Minikube from .deb
+      apt:
+        deb: /tmp/minikube.deb
+        state: present
+
+    - name: Add HashiCorp GPG key
+      apt_key:
+        url: https://apt.releases.hashicorp.com/gpg
+        state: present
+
+    - name: Add HashiCorp repository
+      apt_repository:
+        repo: "deb [arch=amd64] https://apt.releases.hashicorp.com {{ ansible_facts['distribution_release'] }} main"
+        state: present
+
+    - name: Install Terraform
+      apt:
+        name: terraform
+        state: present
+        update_cache: yes
+

@@ -1,0 +1,36 @@
+name: Deploy Hello World Service
+
+on:
+  workflow_dispatch:
+    inputs:
+      site_name:
+        description: 'The name of the site to deploy'
+        required: true
+        type: string
+
+jobs:
+  setup-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install Ansible
+        run: pip install ansible
+
+      - name: Run Ansible Playbook to Install Tools
+        run: |
+          echo "Running Ansible to install Minikube, Kubectl, and Terraform..."
+          ansible-playbook ansible/site.yml
+
+      - name: Verify Versions
+        run: |
+          echo "Verifying installations..."
+          minikube version
+          kubectl version --client
+          terraform --version
