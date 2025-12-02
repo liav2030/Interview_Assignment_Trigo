@@ -34,3 +34,11 @@ jobs:
           minikube version
           kubectl version --client
           terraform --version
+      
+      - name: Start Minikube
+        run: |
+          echo "Starting Minikube..."
+          minikube start --driver=docker --force
+          echo "Waiting for nodes..."
+          kubectl wait --for=condition=ready node --all --timeout=60s
+          kubectl get nodes
